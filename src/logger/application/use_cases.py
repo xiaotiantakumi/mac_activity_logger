@@ -29,6 +29,7 @@ class ScreenMonitoringUseCase:
         
         # 前回フレームの状態保持
         self.last_img_feature: Optional[np.ndarray] = None
+        self.last_ocr_text: Optional[str] = None
         
     def execute_step(self, audio_transcript: str = "") -> Optional[LogEntry]:
         """
@@ -58,6 +59,19 @@ class ScreenMonitoringUseCase:
         # 3. 変化あり -> 詳細処理 (OCR & Window Info)
         # ここで初めて重い処理（OCR）を走らせる
         text = self.ocr.extract_text(image_ref)
+
+        # 3.1 Text Similarity Check (Deduplication)
+        # 画像が変わっていても、テキストがほぼ同じならスキップする (OCRノイズ対策)
+        if self.similarity.is_text_similar(text, self.last_ocr_text):
+            # 類似している場合はスキップ
+            # ただし、状態(画像特徴量など)は更新しておくべきか？
+            # ここでは「実質変化なし」とみなして、画像特徴量も最新に更新してループを継続させることで
+            # 微妙な変化の蓄積によるスナップショット漏れを防ぐ
+            self.last_img_feature = current_feature
+            # テキストも最新の方が精度が良い可能性があるので更新
+            self.last_ocr_text = text
+            return None
+
         window_info = self.window.get_active_window_title()
         
         # 4. Entity作成
@@ -80,5 +94,6 @@ class ScreenMonitoringUseCase:
         
         # 6. Update State
         self.last_img_feature = current_feature
+        self.last_ocr_text = text
         
         return entry

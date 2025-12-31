@@ -30,7 +30,13 @@ class ActivityLoggerApp:
         self.screen_service = ScreenCapturer()
         self.ocr_service = OcrService()
         self.window_service = WindowInfoService()
-        self.audio_service = WhisperAudioService()  # Use Whisper
+        
+        if getattr(args, "no_audio", False):
+            print("Audio recording is disabled.")
+            self.audio_service = None
+        else:
+            self.audio_service = WhisperAudioService()  # Use Whisper
+        
         self.persistence_service = JsonlLogger(output_dir=args.logs_dir)
         self.similarity_service = SimilarityChecker(threshold_percent=args.threshold)
         
@@ -58,7 +64,9 @@ class ActivityLoggerApp:
             
             try:
                 # 1. 音声テキストの取得 (非同期スレッドが解析した結果を回収)
-                transcript = self.audio_service.get_transcript_chunk()
+                transcript = ""
+                if self.audio_service:
+                    transcript = self.audio_service.get_transcript_chunk()
                 
                 # 2. UseCase 実行
                 entry = self.use_case.execute_step(audio_transcript=transcript)
@@ -88,14 +96,16 @@ class ActivityLoggerApp:
     def run(self):
         # 0. Preload Model (Download & Warmup)
         # This prevents the first transcription from being very slow or timing out
-        self.audio_service.preload_model()
+        if self.audio_service:
+            self.audio_service.preload_model()
 
         # 1. Start Audio Service
-        try:
-            self.audio_service.start_recording()
-        except Exception as e:
-            print(f"Failed to start audio service: {e}")
-            print("Continuing without audio log...")
+        if self.audio_service:
+            try:
+                self.audio_service.start_recording()
+            except Exception as e:
+                print(f"Failed to start audio service: {e}")
+                print("Continuing without audio log...")
 
         # 2. Run Monitoring Loop (Blocking)
         try:
@@ -106,13 +116,15 @@ class ActivityLoggerApp:
         finally:
             self.should_stop = True
             print("\nStopping logger...")
-            self.audio_service.stop_recording()
+            if self.audio_service:
+                self.audio_service.stop_recording()
 
 def main():
     parser = argparse.ArgumentParser(description="macOS Activity Logger")
     parser.add_argument("--interval", type=float, default=2.0, help="Capture interval in seconds")
     parser.add_argument("--threshold", type=float, default=95.0, help="Similarity threshold percentage")
     parser.add_argument("--logs-dir", type=str, default="logs", help="Directory to save logs")
+    parser.add_argument("--no-audio", action="store_true", help="Disable audio recording")
     args = parser.parse_args()
 
     app = ActivityLoggerApp(args)

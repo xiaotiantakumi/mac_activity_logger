@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Optional
+from difflib import SequenceMatcher
 
 class SimilarityChecker:
     """
@@ -48,3 +49,25 @@ class SimilarityChecker:
         
         # 平均差分が許容値以下なら「類似している」
         return mean_diff < allowance
+
+    def is_text_similar(self, text1: str, text2: str, threshold: float = 0.8) -> bool:
+        """
+        2つのテキストが類似しているかを判定する。
+        
+        Args:
+            text1: 比較対象のテキスト1
+            text2: 比較対象のテキスト2
+            threshold: 類似度閾値 (0.0 - 1.0)。デフォルト0.8。
+            
+        Returns:
+            bool: 類似していれば True
+        """
+        if not text1 and not text2:
+            return True
+        if not text1 or not text2:
+            return False
+            
+        # 文字列類似度 (Levenshtein like)
+        similarity = SequenceMatcher(None, text1, text2).ratio()
+        return similarity >= threshold
+
