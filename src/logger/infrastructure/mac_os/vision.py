@@ -32,8 +32,14 @@ class OcrService:
         )
         
         # リクエスト実行 (同期処理)
-        # performRequests:error: は bool, error を返す
-        success, error = handler.performRequests_error_([self.request], None)
+        # MLX(GPU)との競合を避けるため、一応ロックを取る
+        try:
+            from ..ai.utils import mlx_lock
+            with mlx_lock:
+                success, error = handler.performRequests_error_([self.request], None)
+        except ImportError:
+            # Fallback if utils not available in this context
+            success, error = handler.performRequests_error_([self.request], None)
         
         if not success:
             # エラーログなどは実運用ではloggerを使うべき

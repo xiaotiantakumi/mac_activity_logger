@@ -12,9 +12,11 @@ class JsonlLogger(PersistenceInterface):
         os.makedirs(output_dir, exist_ok=True)
         
     def _get_log_filepath(self, dt: datetime) -> str:
-        # 日ごとにローテーション
-        filename = f"activity_{dt.strftime('%Y-%m-%d')}.jsonl"
-        return os.path.join(self.output_dir, filename)
+        # 日ごとにディレクトリを作成: logs/YYYY-MM-DD/activity.jsonl
+        date_str = dt.strftime('%Y-%m-%d')
+        date_dir = os.path.join(self.output_dir, date_str)
+        os.makedirs(date_dir, exist_ok=True)
+        return os.path.join(date_dir, "activity.jsonl")
 
     def save(self, entry: LogEntry):
         filepath = self._get_log_filepath(entry.timestamp)

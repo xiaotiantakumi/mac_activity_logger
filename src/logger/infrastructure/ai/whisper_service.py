@@ -32,7 +32,9 @@ class WhisperAudioService:
         try:
             # Dummy inference to force model load
             dummy_audio = np.zeros(16000) # 1 second of silence
-            mlx_whisper.transcribe(dummy_audio, path_or_hf_repo=self.model_path)
+            from .utils import mlx_lock
+            with mlx_lock:
+                mlx_whisper.transcribe(dummy_audio, path_or_hf_repo=self.model_path)
             print("Model loaded successfully.")
         except Exception as e:
             print(f"Failed to preload model: {e}")
@@ -88,11 +90,10 @@ class WhisperAudioService:
     def _transcription_loop(self):
         """
         Consumes audio chunks from queue and runs mlx-whisper.
-        Using a simple approach: Transcribe every ~5-10 seconds of audio.
         """
         accumulated_audio = []
         accumulated_samples = 0
-        min_seconds_to_transcribe = 5.0 # Transcribe when we have at least 5s
+        min_seconds_to_transcribe = 10.0 # Changed from 5.0 to 10.0 as requested
         
         while not self._stop_event.is_set():
             try:
@@ -114,10 +115,6 @@ class WhisperAudioService:
             except Exception as e:
                 print(f"Error in transcription loop: {e}")
 
-        # Process remaining audio on stop
-        if accumulated_audio:
-            self._process_accumulated_audio(accumulated_audio)
-
     def _calculate_rms(self, audio_data):
         """Calculate Root Mean Square amplitude."""
         if len(audio_data) == 0:
@@ -132,25 +129,33 @@ class WhisperAudioService:
         if not text:
             return False
             
-        # 1. Repetitive patterns check (e.g., "DoDoDoDo...", "パパパパ...")
+        # 1. Repetitive patterns check (e.g., "DoDoDoDo...", "そうまりそうまり...")
         if len(text) > 10:
+            # Check for excessive repetition of 2-4 character segments
+            for n in range(2, 5):
+                segment = text[:n]
+                if text.count(segment) > 5: # Same segment repeated too many times
+                    return True
+
             # Check for single character repetition dominating the string
             char_counts = {}
             for char in text:
                 char_counts[char] = char_counts.get(char, 0) + 1
             
             max_count = max(char_counts.values())
-            if max_count / len(text) > 0.5: # 50% same character? suspicious
-                # Further check: repetitive substrings
+            if max_count / len(text) > 0.6: # 60% same character
                 return True
 
-        # 2. Known hallucination phrases (often generated during silence)
+        # 2. Known hallucination phrases (often generated during silence or noise)
         known_hallucinations = [
             "ご視聴ありがとうございました",
             "チャンネル登録",
             "字幕",
             "Subtitles",
-            "Thank you for watching"
+            "Thank you for watching",
+            "視聴ありがとう",
+            "そうまり", "そうな!", # User reported patterns
+            "幾幾幾", "我々我々"
         ]
         
         for phrase in known_hallucinations:
@@ -181,12 +186,19 @@ class WhisperAudioService:
         # mlx_whisper.transcribe supports numpy array directly
         try:
             # print(f"[DEBUG] Transcribing {len(audio_data)/self.sample_rate:.1f}s of audio...")
-            result = mlx_whisper.transcribe(
-                audio_data, 
-                path_or_hf_repo=self.model_path,
-                language="ja", # Auto-detect is slower, enforcing Japanese is safer for this user
-                verbose=False
-            )
+            
+            # Use global lock to prevent concurrency with Gemma
+            from .utils import mlx_lock
+            # print("[Whisper] Waiting for mlx_lock...")
+            with mlx_lock:
+                # print("[Whisper] Lock acquired. Transcribing...")
+                result = mlx_whisper.transcribe(
+                    audio_data, 
+                    path_or_hf_repo=self.model_path,
+                    language="ja", 
+                    verbose=False
+                )
+                # print("[Whisper] Transcription finished. Releasing lock...")
             text = result["text"].strip()
             
             # 2. Post-processing / Hallucination Filter
