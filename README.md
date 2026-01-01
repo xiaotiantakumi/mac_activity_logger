@@ -62,13 +62,37 @@ uv run src/logger/presentation/cli.py
 
 ### 3. ログの確認
 
-`logs` ディレクトリに日付ごとのファイルが生成されます。
+ログは **`logs/YYYY-MM-DD/`** ディレクトリ内に日付ごとに分割して保存されます。
+
+- **アクティビティログ**: `logs/YYYY-MM-DD/activity.jsonl`
+- **一日の要約**: `logs/YYYY-MM-DD/summary.jsonl` (要約機能が有効な場合)
 
 ```bash
-cat logs/activity_YYYY-MM-DD.jsonl
+# 今日のアクティビティログを確認
+ls -l logs/$(date +%Y-%m-%d)/activity.jsonl
 ```
 
-### 4. ファイル一括 OCR（PDF/画像対応）
+### 4. 自動要約機能 (Gemma + MLX)
+
+ログをリアルタイムで解析し、日次アクティビティの要約を作成する機能がデフォルトで有効になっています。
+**初回使用前にモデルのダウンロードが必要です。**
+
+#### セットアップ（初回のみ）
+
+```bash
+uv run scripts/download_model.py
+```
+これにより、軽量LLMモデル (`mlx-community/gemma-2-2b-it-4bit`) がダウンロードされます (数GB)。
+
+#### オプション
+
+- `--no-summarize`: 要約機能を無効化します。
+- `--summary-chunk-size`: 要約を実行するログエントリの単位（デフォルト: 5）。
+- `--summary-by-screen-change`: ログ件数ではなく、画面が変化した回数（画像/テキストの変化）をトリガーに要約を実行します。
+
+---
+
+### 5. ファイル一括 OCR（PDF/画像対応）
 
 指定したディレクトリ内のメディアファイル（PDF, JPEG, PNG 等）を一括で OCR し、テキストとして保存するツールも利用できます。
 
@@ -84,6 +108,18 @@ uv run src/logger/presentation/file_ocr_cli.py --output-dir /path/to/output
 ```
 
 OCR 結果は、指定した出力ディレクトリ（デフォルトの場合は `ocr_result`）に `.txt` ファイルとして保存されます。
+
+### 6. Gemma Chat (CLI)
+
+ダウンロードしたモデルを使って、ターミナルから直接 Gemma とチャットやテキスト生成ができるツールです。
+
+```bash
+# 対話モード
+uv run src/logger/presentation/gemma_cli.py -i
+
+# ワンショット実行
+uv run src/logger/presentation/gemma_cli.py "Pythonのメリットを3つ教えて"
+```
 
 **ログの例**:
 

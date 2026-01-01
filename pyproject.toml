@@ -17,6 +17,7 @@ dependencies = [
     "sounddevice",
     "numba>=0.60.0",
     "safetensors>=0.7.0",
+    "mlx-lm>=0.19.2",
 ]
 
 [dependency-groups]
