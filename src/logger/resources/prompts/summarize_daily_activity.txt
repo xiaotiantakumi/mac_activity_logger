@@ -1,0 +1,11 @@
+Please create in Japanese.
+Analyze the following activity logs from {start_time} to {end_time}.
+Summarize what the user was doing. 
+Focus on the main tasks or content consumed, including any audio conversations.
+
+Logs:
+{log_text}
+
+Summary (Output ONLY a valid JSON object with 'summary' key. No prefix, no suffix, no explanation):
+{{"summary": "ここに要約文を作成してください。"}}
+Please create in Japanese.

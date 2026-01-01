@@ -1,0 +1,11 @@
+Please create in Japanese.
+Analyze the following VISUAL activity logs from {start_time} to {end_time}.
+These logs represent moments where the screen content (windows, apps, or text) changed.
+Summarize what the user was doing on their computer.
+
+Logs:
+{log_text}
+
+Summary (Output ONLY a valid JSON object with 'summary' key. No prefix, no suffix, no explanation):
+{{"summary": "ここに視覚的な活動の要約（アプリの切り替えや作業内容）を作成してください。"}}
+Please create in Japanese.

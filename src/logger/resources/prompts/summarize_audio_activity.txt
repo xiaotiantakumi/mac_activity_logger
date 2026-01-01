@@ -1,0 +1,11 @@
+Please create in Japanese.
+Analyze the following AUDIO transcript logs from {start_time} to {end_time}.
+These logs represent captured audio/conversations.
+Summarize the key points of the conversations or audio content.
+
+Logs:
+{log_text}
+
+Summary (Output ONLY a valid JSON object with 'summary' key. No prefix, no suffix, no explanation):
+{{"summary": "ここに音声・会話内容の要約を作成してください。"}}
+Please create in Japanese.
