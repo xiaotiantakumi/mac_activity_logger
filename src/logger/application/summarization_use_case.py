@@ -27,6 +27,7 @@ class LogSummarizationUseCase:
         self.state_file = os.path.join(logs_root_dir, f"summarizer_state_{summary_type}.json")
         self.state = self._load_state()
         self.should_stop = False
+        self.on_summary_generated = None # Callback: Callable[[Dict[str, Any]], None]
 
     def _load_state(self) -> Dict[str, int]:
         if os.path.exists(self.state_file):
@@ -131,6 +132,8 @@ class LogSummarizationUseCase:
             summary = self._generate_summary(chunk)
             if summary:
                 self._append_summary(summary_file, summary)
+                if self.on_summary_generated:
+                    self.on_summary_generated(summary)
                 # update state to the raw index of the last entry in this chunk
                 new_processed_count = chunk[-1]["_raw_index"]
                 self.state[date_str] = new_processed_count

@@ -18,6 +18,7 @@ dependencies = [
     "numba>=0.60.0",
     "safetensors>=0.7.0",
     "mlx-lm>=0.19.2",
+    "flet[all]>=0.80.0",
 ]
 
 [dependency-groups]
